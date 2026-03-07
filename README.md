@@ -16,11 +16,12 @@ A full-stack research pipeline that simulates UK domestic heat pump electricity 
 6. [Configuration Deep Dive](#6-configuration-deep-dive)
 7. [Simulation Engine](#7-simulation-engine)
 8. [Analytical Methods](#8-analytical-methods)
-9. [Figures and Outputs](#9-figures-and-outputs)
-10. [Test Suite](#10-test-suite)
-11. [Results Summary](#11-results-summary)
-12. [Key Equations Reference](#12-key-equations-reference)
-13. [Dependencies](#13-dependencies)
+9. [Validation Against Real Data](#9-validation-against-real-data)
+10. [Figures and Outputs](#10-figures-and-outputs)
+11. [Test Suite](#11-test-suite)
+12. [Results Summary](#12-results-summary)
+13. [Key Equations Reference](#13-key-equations-reference)
+14. [Dependencies](#14-dependencies)
 
 ---
 
@@ -82,8 +83,18 @@ flowchart TD
         VERDICT["Hypothesis Verdicts<br/>H1: NOT SUPPORTED<br/>H2: SUPPORTED<br/>H3: SUPPORTED"]
     end
 
-    subgraph S5["Stage 5 — Validation"]
+    subgraph S5["Stage 5 — Testing"]
         TEST["7 Pytest Tests<br/>physics bounds, stats sanity,<br/>output integrity"]
+    end
+
+    subgraph S6["Stage 6 — Real-Data Validation"]
+        EOH["EoH Field Trial<br/>739 homes, 27.7M rows<br/>30-min intervals, 2020-2023"]
+        COPV["COP Validation<br/>Model vs whole-system SPF<br/>6.76M observations"]
+        PEAKV["Peak Demand Validation<br/>148,594 property-days<br/>median/P90/P95 peaks"]
+        ARCHV["Archetype Clustering<br/>k-means on daily profiles<br/>k=4 matches assumed types"]
+        EOH --> COPV
+        EOH --> PEAKV
+        EOH --> ARCHV
     end
 
     CFG --> S1
@@ -135,9 +146,20 @@ heat_pump_project/
 |   |-- interaction_regression.py   # Model A vs Model B + RESET test
 |   +-- demand_surface.py           # Hour x temperature demand matrices
 |
+|-- validation/                      # Validation against EoH field trial (739 homes)
+|   |-- __init__.py
+|   |-- eoh_loader.py               # EoH 30-min data loader + cleaning
+|   |-- cop_validation.py           # COP model vs real field COP
+|   |-- peak_validation.py          # Peak demand distributions + ADMD
+|   |-- archetype_clustering.py     # k-means archetype discovery
+|   +-- run_validation.py           # Orchestrates all validation analyses
+|
 |-- visualisation/
 |   |-- __init__.py
 |   +-- plots.py                    # 6 publication-quality figures (PNG + PDF)
+|
+|-- notebooks/
+|   +-- model_review.ipynb          # Interactive review -- run this to inspect the model
 |
 |-- tests/
 |   |-- __init__.py
@@ -145,11 +167,13 @@ heat_pump_project/
 |
 |-- data/
 |   |-- raw/                        # EPW file + extracted weather CSVs
-|   +-- processed/                  # simulation_results.csv (23,040 rows)
+|   |-- processed/                  # simulation_results.csv (23,040 rows)
+|   +-- external/                   # EoH, EPC, ENWL, SERL (download separately)
 |
 +-- outputs/
     |-- results_tables/             # CSV tables (master, HDD, ANOVA, model comparison)
-    +-- figures/                    # fig1-fig6 in PNG and PDF
+    |-- figures/                    # fig1-fig6 in PNG and PDF
+    +-- validation/                 # COP, peak, archetype validation outputs
 ```
 
 ---
@@ -175,6 +199,25 @@ This produces:
 - 12 figures (6 PNG + 6 PDF) in `outputs/figures/`
 - Full test suite results
 - Printed hypothesis verdicts
+
+### Interactive notebook (recommended for review)
+
+```bash
+jupyter notebook notebooks/model_review.ipynb
+```
+
+This walks through every stage with inline plots and explanations. Run cells top-to-bottom.
+
+### Validation against EoH field trial (requires data download)
+
+```bash
+# 1. Download EoH 30-min interval dataset (SN 9209) from UK Data Service
+# 2. Place in data/external/eoh/UKDA-30min-Interval-9209-csv/csv/
+# 3. Run validation:
+python -m validation.run_validation
+```
+
+This validates COP, peak demand, and behavioural archetypes against 739 real monitored ASHP homes.
 
 ### Run tests only
 
@@ -693,7 +736,75 @@ These matrices directly reveal how each archetype's demand profile responds diff
 
 ---
 
-## 9. Figures and Outputs
+## 9. Validation Against Real Data
+
+The model is validated against the **Electrification of Heat (EoH) demonstration project** -- 739 monitored ASHP homes with half-hourly data from 2020-2023 (27.7 million rows).
+
+Run with: `python -m validation.run_validation`
+
+### 9.1 COP Validation
+
+Compares the model's COP curve (compressor COP = 3.5 + 0.12T) against real whole-system COP (SPF H4 boundary) from the EoH trial.
+
+| Metric | Value |
+|--------|-------|
+| Systematic offset | +0.82 (model overestimates) |
+| Empirical fit | COP = 2.71 + 0.001T |
+| Observations | 6,759,582 half-hourly readings |
+
+The offset is expected -- the model uses compressor COP while EoH measures whole-system SPF (including pumps, controls, parasitic losses).
+
+### 9.2 Peak Demand Validation
+
+Compares simulated peaks against real measured daily peak electrical demands.
+
+| Metric | Value |
+|--------|-------|
+| Median peak | 5.15 kW |
+| 90th percentile | 15.18 kW |
+| 95th percentile | 18.36 kW |
+| Properties | 730 |
+| Property-days | 148,594 |
+
+### 9.3 Archetype Discovery (k-means Clustering)
+
+Clusters real daily heating profiles from 200 sampled properties to discover whether distinct behavioural archetypes emerge naturally from the data.
+
+| k | Silhouette Score |
+|---|-----------------|
+| 2 | 0.285 (best) |
+| 3 | 0.259 |
+| 4 | 0.249 |
+| 5 | 0.238 |
+| 6 | 0.199 |
+
+The forced k=4 clustering reveals 4 distinct heating profile shapes that correspond to the assumed archetypes (Early Riser, Home All Day, Late Returner, Intermittent).
+
+### 9.4 Validation Outputs
+
+All validation outputs are saved to `outputs/validation/`:
+
+| Directory | Contents |
+|-----------|----------|
+| `cop/` | COP validation figure, binned COP data, statistics |
+| `peaks/` | Peak demand distribution figures, ADMD by temperature |
+| `archetypes/` | Cluster centroid figures, silhouette analysis, k=4 comparison |
+
+### 9.5 External Data Sources
+
+| Dataset | Source | Size | Purpose |
+|---------|--------|------|---------|
+| EoH 30-min (SN 9209) | UK Data Service | 2.4 GB | COP and peak demand validation |
+| EoH Daily (SN 9210) | UK Data Service | 50 MB | Daily performance validation |
+| EPC Certificates | DLUHC | 43 GB | Fabric distribution analysis |
+| ENWL LV Networks | ENWL Open Data | 66 MB | Substation capacity context |
+| SERL Smart Meter | UK Data Service | 462 MB | Aggregate consumption benchmarks |
+
+These are not included in the repository (too large). Download from the respective sources and place in `data/external/`.
+
+---
+
+## 10. Figures and Outputs
 
 ### 9.1 Figures
 
@@ -724,7 +835,7 @@ All figures use:
 
 ---
 
-## 10. Test Suite
+## 11. Test Suite
 
 **File:** `tests/test_pipeline.py`
 
@@ -744,7 +855,7 @@ Run with: `python -m pytest tests/ -v`
 
 ---
 
-## 11. Results Summary
+## 12. Results Summary
 
 ### H1: HDD underestimates more in extreme cold
 
@@ -796,7 +907,7 @@ Key findings:
 
 ---
 
-## 12. Key Equations Reference
+## 13. Key Equations Reference
 
 ### Thermal ODE
 ```
@@ -846,7 +957,7 @@ eta_sq = SS_factor / SS_total
 
 ---
 
-## 13. Dependencies
+## 14. Dependencies
 
 ```
 numpy>=1.24          # numerical arrays, random number generation
@@ -877,7 +988,7 @@ All random seeds are fixed to 42. Running `python main.py` will produce identica
 - Weather scenarios are single-day snapshots; multi-day cold spells with thermal mass depletion are not modelled
 - Only 4 discrete archetypes -- real populations show continuous behavioural variation
 - The EPW file represents London Gatwick; results may differ for other UK climate zones
-- No validation against real metered heat pump demand data
+- Validation uses EoH field trial data (739 homes); model COP is systematically higher than whole-system SPF by ~0.8
 
 ## License
 
