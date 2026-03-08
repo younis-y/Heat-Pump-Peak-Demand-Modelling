@@ -42,79 +42,70 @@ Three formal hypotheses are tested:
 ## Pipeline Overview
 
 ```mermaid
-flowchart TD
-    subgraph S0["Configuration"]
-        CFG["simulation_config.yaml<br/>All parameters, data sources,<br/>scenario definitions"]
+flowchart LR
+    subgraph CONFIG["1 | Configuration"]
+        CFG[["simulation_config.yaml"]]
     end
 
-    subgraph S1["Stage 1 — Real Weather Data"]
-        EPW["London Gatwick TMYx EPW<br/>8760 hourly rows, 2009-2023"]
-        PARSE["EPW Parser<br/>extract_day_profile()"]
-        W1["W1: Mild Cold<br/>19 Mar, T_mean = 4.0 C"]
-        W2["W2: Design Cold<br/>10 Feb, T_mean = -0.7 C"]
-        W3["W3: Extreme Cold<br/>11 Feb, T_mean = -2.5 C"]
-        EPW --> PARSE
-        PARSE --> W1
-        PARSE --> W2
-        PARSE --> W3
+    subgraph WEATHER["2 | Weather"]
+        EPW["London Gatwick<br/>TMYx EPW"] --> W["W1 Mild &ensp; W2 Design &ensp; W3 Extreme"]
     end
 
-    subgraph S2["Stage 2 — 2R1C Thermal Simulation"]
-        FACTORIAL["Full Factorial Design<br/>4 archetypes x 3 weather x 2 fabric<br/>x 10 replicates = 240 runs"]
-        ODE["Forward Euler ODE<br/>C dT/dt = Q_hp + Q_int + Q_sol - UA dT<br/>60s internal steps, 15-min output"]
-        HP["Variable-Speed ASHP Model<br/>12 kW thermal, COP derating,<br/>defrost penalty, aux heater"]
-        SIM["simulation_results.csv<br/>23,040 rows"]
-        FACTORIAL --> ODE
-        HP --> ODE
-        ODE --> SIM
+    subgraph SIM["3 | Simulation"]
+        direction TB
+        FAC["Full Factorial<br/>4 arch x 3 weather x 2 fabric<br/>x 10 reps = 240 runs"]
+        ODE["2R1C ODE + ASHP Model<br/>COP derating, defrost,<br/>variable-speed, aux heater"]
+        OUT[("simulation_results.csv<br/>23 040 rows")]
+        FAC --> ODE --> OUT
     end
 
-    subgraph S3["Stage 3 — Statistical Analysis"]
-        HDD["HDD Benchmark<br/>Peak = alpha + beta * HDD<br/>fitted on cross-archetype mean"]
-        ANOVA["3-Way ANOVA (Type II)<br/>eta-squared decomposition<br/>222 residual df"]
-        REG["Interaction Regression<br/>Model A: HDD-linear<br/>Model B: T + T^2 + archetype + interactions"]
-        RESET["Ramsey RESET Test<br/>nonlinearity diagnostic"]
-        SURF["Demand Surfaces<br/>hour x temperature matrices<br/>per archetype"]
+    subgraph ANALYSIS["4 | Statistical Analysis"]
+        direction TB
+        HDD["HDD Benchmark"]
+        ANV["3-Way ANOVA"]
+        REG["Interaction Regression<br/>+ RESET Test"]
+        SURF["Demand Surfaces"]
     end
 
-    subgraph S4["Stage 4 — Outputs"]
-        FIG["6 Publication Figures<br/>PNG + PDF, 300 DPI<br/>colorblind-safe palette"]
-        TAB["5 Results Tables<br/>master, HDD, ANOVA,<br/>model comparison, full sim"]
-        VERDICT["Hypothesis Verdicts<br/>H1: NOT SUPPORTED<br/>H2: SUPPORTED<br/>H3: SUPPORTED"]
+    subgraph OUTPUTS["5 | Outputs"]
+        direction TB
+        FIG["6 Figures<br/>PNG + PDF"]
+        TAB["5 Results Tables"]
+        VER{{"H1 H2 H3<br/>Verdicts"}}
+        FIG --- VER
+        TAB --- VER
     end
 
-    subgraph S5["Stage 5 — Testing"]
-        TEST["7 Pytest Tests<br/>physics bounds, stats sanity,<br/>output integrity"]
+    subgraph VALID["6 | Validation vs Real Data"]
+        direction TB
+        EOH[("EoH Field Trial<br/>739 homes, 27.7M rows")]
+        COP["COP Validation"]
+        PK["Peak Demand"]
+        ARC["Archetype Clustering"]
+        EOH --> COP
+        EOH --> PK
+        EOH --> ARC
     end
 
-    subgraph S6["Stage 6 — Real-Data Validation"]
-        EOH["EoH Field Trial<br/>739 homes, 27.7M rows<br/>30-min intervals, 2020-2023"]
-        COPV["COP Validation<br/>Model vs whole-system SPF<br/>6.76M observations"]
-        PEAKV["Peak Demand Validation<br/>148,594 property-days<br/>median/P90/P95 peaks"]
-        ARCHV["Archetype Clustering<br/>k-means on daily profiles<br/>k=4 matches assumed types"]
-        EOH --> COPV
-        EOH --> PEAKV
-        EOH --> ARCHV
+    subgraph TEST["7 | Tests"]
+        PYT["7 Pytest Checks"]
     end
 
-    CFG --> S1
-    CFG --> S2
-    W1 --> FACTORIAL
-    W2 --> FACTORIAL
-    W3 --> FACTORIAL
-    SIM --> HDD
-    SIM --> ANOVA
-    SIM --> REG
-    REG --> RESET
-    SIM --> SURF
+    CFG --> WEATHER
+    CFG --> SIM
+    W --> FAC
+    OUT --> HDD
+    OUT --> ANV
+    OUT --> REG
+    OUT --> SURF
     HDD --> TAB
-    ANOVA --> TAB
+    ANV --> TAB
     REG --> TAB
     HDD --> FIG
-    ANOVA --> FIG
+    ANV --> FIG
     SURF --> FIG
-    TAB --> VERDICT
-    SIM --> TEST
+    OUT --> PYT
+    OUT -.-> VALID
 ```
 
 ---
