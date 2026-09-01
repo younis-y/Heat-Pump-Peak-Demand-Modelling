@@ -1,0 +1,4 @@
+weather_scenario,hdd_peak_mean_kW,sim_peak_mean_kW,mean_temp_C,hdd_admd_kW
+W1,5.538,5.605125,4.01,3.8766
+W2,5.806,5.56525,-0.7,4.0642
+W3,5.909,6.08225,-2.53,4.136299999999999

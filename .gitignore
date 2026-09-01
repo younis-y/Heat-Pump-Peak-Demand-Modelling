@@ -1,0 +1,57 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+
+# Virtual environments
+.venv/
+venv/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets and credentials — never commit
+.env
+.env.*
+*.pem
+*.key
+*.p12
+credentials*
+secrets*
+service-account*.json
+*.log
+
+# EPW companion files
+*.zip
+*.clm
+*.ddy
+*.pvsyst
+*.rain
+*.stat
+*.wea
+
+# External datasets (too large for git — download separately)
+data/external/
+
+# Raw and processed simulation data. The EPW input and the three extracted
+# weather profiles are committed so the pipeline runs without a download; the
+# simulation output is committed so the tables can be read without a re-run.
+data/raw/*
+!data/raw/README.md
+!data/raw/*.epw
+!data/raw/weather_W*.csv
+data/processed/*
+!data/processed/simulation_results.csv
+
+# Jupyter
+.ipynb_checkpoints/
+.jupyter/
+.virtual_documents/
+anaconda_projects/
+
+# Editor / Office temp files
+*.bak
+~$*

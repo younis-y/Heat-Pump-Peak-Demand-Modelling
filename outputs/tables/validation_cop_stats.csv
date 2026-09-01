@@ -1,0 +1,2 @@
+MAE,RMSE,bias,empirical_intercept,empirical_slope,R_squared_empirical,systematic_offset,n_bins,n_observations
+1.144,1.282,-0.816,2.714,0.0014,0.029,0.816,31,6759582

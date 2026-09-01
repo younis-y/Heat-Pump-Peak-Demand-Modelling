@@ -1,0 +1,24 @@
+NOTICE
+======
+
+The MIT licence in LICENSE covers the code and documentation written by the
+author of this repository. It does not cover third-party data bundled here.
+
+Bundled third-party data
+------------------------
+
+  data/raw/GBR_ENG_London-Gatwick.AP.037760_TMYx.2009-2023.epw
+
+    TMYx typical-year weather file for London Gatwick Airport (WMO 037760),
+    period of record 2009-2023, obtained from Climate.OneBuilding.org and
+    derived from NCEI ISD and ERA5 observations. Copyright is held by the
+    original publishers. Redistribution terms have not been confirmed; see
+    data/raw/README.md.
+
+  data/raw/weather_W1.csv, weather_W2.csv, weather_W3.csv
+
+    Derived from the EPW file above by the pipeline. The same caveat applies.
+
+External datasets referenced by README section 7.5 (Electrification of Heat,
+EPC, ENWL, SERL) are not included in this repository and carry their own terms
+from their respective providers.
