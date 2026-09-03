@@ -1,8 +1,25 @@
-# How Much Does Ignoring Occupant Behaviour Cost?
+# Occupant behaviour outweighs building fabric in heat pump peak demand
 
-### Quantifying the Underestimation of Heat Pump Peak Demand in Current Grid Planning Tools
+A full simulation-and-inference pipeline for UK domestic heat pump electricity
+demand, built to test whether the HDD-based regressions used in grid planning
+systematically understate peak load by averaging occupant diversity away.
 
-A research pipeline that simulates UK domestic heat pump electricity demand under varying occupant behaviour, building fabric, and weather conditions, and quantifies how much a Heating-Degree-Day (HDD) planning model — the industry standard — misses when it ignores occupant diversity and the nonlinear weather-behaviour interaction.
+**They do, and by a wide margin.** Occupant behaviour explains **27.0%** of
+peak-demand variance against building fabric's **21.2%**, and the
+behaviour-by-fabric interaction is the single largest term at **26.9%** — the
+value of a retrofit depends on how the occupants actually use the building. An
+HDD-linear planning model reaches R² = 0.069 on this data where an
+interaction-aware model reaches **0.644** (RMSE 0.574 vs 0.355 kW).
+
+Built on a 2R1C thermal ODE driven by real EPW weather, a 240-run full factorial
+Monte Carlo (4 occupant archetypes × 3 weather scenarios × 2 fabric levels × 10
+replicates), Type II ANOVA with eta-squared effect sizes, and validated against
+**730 monitored homes** from the Electrification of Heat field trial.
+
+One of the three hypotheses is not supported, and that is reported alongside the
+two that are — the underestimation is not monotone in cold, because the HDD model
+fits best at the design temperature it was effectively calibrated on. Section 10
+carries all three verdicts with the numbers behind them.
 
 ---
 
